@@ -18,9 +18,9 @@ int get_mandlebrot_iter(double x, double y, int max_iter)
 	while (n < max_iter && z.mod_sqr() <= 4.0) {
 		z = { z.x * z.x - z.y * z.y + c.x,
 			2 * z.x * z.y + c.y };
+
 		++n;
 	}
 
-	if (n == max_iter) return -1;
-	else return n;
+	return n;
 }

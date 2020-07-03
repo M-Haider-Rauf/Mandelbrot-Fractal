@@ -12,6 +12,7 @@ public:
 	~Engine();
 
 	void main_loop();
+	void update_screen_slice(size_t start, size_t end, int pitch, void* pixels);
 
 private:
 	void handle_events();
@@ -25,7 +26,7 @@ private:
 	double y_off = 0.0;
 	SDL_Texture* texture = nullptr;
 	unsigned prev_time = 0;  //for calculating time-step
-	size_t iter_count = 250;	//aka precision
+	size_t max_iter = 256;	//aka precision
 
 	SDL_Color* pixel_table = nullptr; //lookup table for pixel coloring scheme
 };

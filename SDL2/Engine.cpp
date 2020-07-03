@@ -9,6 +9,8 @@
 #include "Complex.hpp"
 #include <cstring>
 #include <ctime>
+#include <thread>
+#include <functional>
 
 Engine::Engine()
 {
@@ -24,19 +26,16 @@ Engine::Engine()
 	texture = SDL_CreateTexture(g_renderer, SDL_PIXELFORMAT_ARGB8888,
 		SDL_TEXTUREACCESS_STREAMING, WIN_WIDTH, WIN_HEIGHT);
 
-	
 
-	pixel_table = new SDL_Color[iter_count]{};
-	
 
-	for (size_t i = 0; i < iter_count; ++i) {
-		double factor = i * 1.0 / (iter_count - 1);
-		factor = std::sqrt(factor);
+	pixel_table = new SDL_Color[max_iter]{};
 
+	for (size_t i = 0; i < max_iter; ++i) {
+		double factor = std::sqrt(i / (max_iter - 1.0));
 		unsigned char val = std::round(factor * 255.0);
-		pixel_table[i] = {
-			val, val, val, 255
-		};
+		
+
+		pixel_table[i] = { val, val, val, 255 };
 	}
 }
 
@@ -124,33 +123,25 @@ void Engine::update_draw()
 
 	SDL_LockTexture(this->texture, nullptr, &pixels, &pitch);
 
-	auto SetPixel = [&](int x, int y, const SDL_Color& pixel)
-	{
-		Uint8* target = (Uint8*)(pixels)+(y * pitch) + x * 4;
-		target[0] = pixel.b;
-		target[1] = pixel.g;
-		target[2] = pixel.r;
-	};
+	std::thread threads[4];
+	for (size_t i = 0; i < 4; ++i) {
+		auto lambda = [&](size_t j)
+		{
+			size_t start = j * (WIN_WIDTH / 4);
+			size_t end = start + (WIN_WIDTH / 4);
+			if (j == 3) end = WIN_WIDTH;
 
-	for (size_t y = 0; y < WIN_HEIGHT; ++y) {
-		for (size_t x = 0; x < WIN_WIDTH; ++x) {
+			this->update_screen_slice(start, end, pitch, pixels);;
 
-			Complex c = {
-				scale(x, 0, WIN_WIDTH - 1, -view_radius + x_off, view_radius + x_off),
-				scale(y, WIN_HEIGHT - 1, 0, -view_radius + y_off, view_radius + y_off)
-			};
-
-			int iters = get_mandlebrot_iter(c.x, c.y, iter_count);
-			if (iters != -1) {
-				SetPixel(x, y, pixel_table[iters]);
-			}
-			else {
-				SetPixel(x, y, {0, 0, 0, 255});
-			}
-		}
+		};
+		threads[i] = std::thread(lambda, i);
 	}
 
-	SDL_UnlockTexture(texture);
+	for (size_t i = 0; i < 4; ++i) {
+		threads[i].join();
+	}
+
+	SDL_UnlockTexture(this->texture);
 }
 
 void Engine::render() const
@@ -171,4 +162,33 @@ void Engine::save_screenshot() const
 	SDL_RenderReadPixels(g_renderer, nullptr, SDL_PIXELFORMAT_ARGB8888, ss->pixels, ss->pitch);
 	sprintf_s(file_name, "ss_%ld.bmp", time(nullptr));
 	SDL_SaveBMP(ss, file_name);
+}
+
+void Engine::update_screen_slice(size_t start, size_t end, int pitch, void* pixels)
+{
+	auto SetPixel = [&](int x, int y, const SDL_Color& pixel)
+	{
+		Uint8* target = (Uint8*)(pixels) + (y * pitch) + x * 4;
+		target[0] = pixel.b;
+		target[1] = pixel.g;
+		target[2] = pixel.r;
+	};
+
+	for (size_t y = 0; y < WIN_HEIGHT; ++y) {
+		for (size_t x = start; x < end; ++x) {
+
+			Complex c = {
+				scale(x, 0, WIN_WIDTH - 1, -view_radius + x_off, view_radius + x_off),
+				scale(y, WIN_HEIGHT - 1, 0, -view_radius + y_off, view_radius + y_off)
+			};
+
+			int iters = get_mandlebrot_iter(c.x, c.y, max_iter);
+			if (iters < max_iter) {
+				SetPixel(x, y, pixel_table[iters]);
+			}
+			else {
+				SetPixel(x, y, { 0, 0, 0, 255 });
+			}
+		}
+	}
 }
