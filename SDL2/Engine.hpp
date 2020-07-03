@@ -4,6 +4,7 @@
 struct SDL_Texture;
 struct SDL_Color;
 
+//The Engine class which contains everything...
 
 class Engine {
 public:
@@ -23,10 +24,10 @@ private:
 	double x_off = 0.0;
 	double y_off = 0.0;
 	SDL_Texture* texture = nullptr;
-	unsigned prev_time = 0;
-	size_t iter_count = 256;
+	unsigned prev_time = 0;  //for calculating time-step
+	size_t iter_count = 250;	//aka precision
 
-	SDL_Color* pixel_table = nullptr;
+	SDL_Color* pixel_table = nullptr; //lookup table for pixel coloring scheme
 };
 
 #endif // !ENGINE_HPP
