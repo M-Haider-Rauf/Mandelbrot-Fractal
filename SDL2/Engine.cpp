@@ -6,37 +6,57 @@
 #include <cassert>
 #include <iostream>
 #include <cstdlib>
-#include "Complex.hpp"
 #include <cstring>
 #include <ctime>
 #include <thread>
 #include <functional>
+#include <iostream>
 
 Engine::Engine()
 {
 	SDL_Init(SDL_INIT_VIDEO);
 	g_window = SDL_CreateWindow("SDL2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		WIN_WIDTH, WIN_HEIGHT, SDL_WINDOW_SHOWN);
-	assert(g_window && "Failed to create Window");
+
+	if (!g_window) {
+		std::cerr << "Error creating window!\n";
+		abort();
+	}
+
 	g_renderer = SDL_CreateRenderer(g_window, -1,
 		SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-	assert(g_renderer && "Failed to create Renderer");
+
+	if (!g_renderer) {
+		std::cerr << "Error creating renderer\n";
+		abort();
+	}
 
 	running = true;
 	texture = SDL_CreateTexture(g_renderer, SDL_PIXELFORMAT_ARGB8888,
 		SDL_TEXTUREACCESS_STREAMING, WIN_WIDTH, WIN_HEIGHT);
 
+	if (!texture) {
+		std::cerr << "Error creating texture\n";
+		abort();
+	}
 
 
-	pixel_table = new SDL_Color[max_iter]{};
+	pixel_table = new SDL_Color[max_iter + 1]{};
+	const double o = std::log(max_iter);
 
 	for (size_t i = 0; i < max_iter; ++i) {
-		double factor = std::sqrt(i / (max_iter - 1.0));
+		double factor = std::log(i + 1.0) / o;
 		unsigned char val = std::round(factor * 255.0);
-		
 
-		pixel_table[i] = { val, val, val, 255 };
+		if (factor > 0.5) {
+			pixel_table[i] = { val, val, val, 255 };
+		}
+		else {
+			pixel_table[i] = { val, val , val, 255};
+		}
 	}
+
+	pixel_table[max_iter] = { 0, 0, 0, 255 };
 }
 
 Engine::~Engine()
@@ -120,21 +140,23 @@ void Engine::update_draw()
 	void* pixels = nullptr;
 	int pitch;
 
-
+	//lock texture for write-access
 	SDL_LockTexture(this->texture, nullptr, &pixels, &pitch);
-
-	std::thread threads[4];
+	
+	std::thread threads[4]; //4 threads
+	//split whole screen into 4 slices, run update pixel routine for each slice on
+	//separate thread.....
 	for (size_t i = 0; i < 4; ++i) {
-		auto lambda = [&](size_t j)
+		auto slice_thread = [&](size_t j)
 		{
 			size_t start = j * (WIN_WIDTH / 4);
 			size_t end = start + (WIN_WIDTH / 4);
 			if (j == 3) end = WIN_WIDTH;
 
 			this->update_screen_slice(start, end, pitch, pixels);;
-
 		};
-		threads[i] = std::thread(lambda, i);
+
+		threads[i] = std::thread(slice_thread, i);
 	}
 
 	for (size_t i = 0; i < 4; ++i) {
@@ -177,18 +199,11 @@ void Engine::update_screen_slice(size_t start, size_t end, int pitch, void* pixe
 	for (size_t y = 0; y < WIN_HEIGHT; ++y) {
 		for (size_t x = start; x < end; ++x) {
 
-			Complex c = {
-				scale(x, 0, WIN_WIDTH - 1, -view_radius + x_off, view_radius + x_off),
-				scale(y, WIN_HEIGHT - 1, 0, -view_radius + y_off, view_radius + y_off)
-			};
+			double cr = scale(x, 0, WIN_WIDTH - 1, -view_radius + x_off, view_radius + x_off);
+			double ci = scale(y, WIN_HEIGHT - 1, 0, -view_radius + y_off, view_radius + y_off);
 
-			int iters = get_mandlebrot_iter(c.x, c.y, max_iter);
-			if (iters < max_iter) {
-				SetPixel(x, y, pixel_table[iters]);
-			}
-			else {
-				SetPixel(x, y, { 0, 0, 0, 255 });
-			}
+			unsigned iters = get_mandlebrot_iter(cr, ci, max_iter);
+			SetPixel(x, y, pixel_table[iters]);
 		}
 	}
 }
