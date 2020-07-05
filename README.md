@@ -3,8 +3,7 @@ This is a mandelbrot fractal plotter written in C++ using the SDL2 graphics libr
 concepts you'll ever see.
 
 # Key bindings
-* **WASD** to pan
-* **+/-** to zoom in/ou
+* **WASD** to pan around
+* **+/-** to zoom in/out
 * **C** to capture screenshot
 
-# P.S.
