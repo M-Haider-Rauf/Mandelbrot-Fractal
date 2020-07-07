@@ -7,3 +7,9 @@ concepts you'll ever see.
 * **+/-** to zoom in/out
 * **C** to capture screenshot
 
+# Screenshots
+
+![](https://ibb.co/0mFL5Q8)
+![](https://ibb.co/Fgv1GtS)
+![](https://ibb.co/0DK9PLk)
+
