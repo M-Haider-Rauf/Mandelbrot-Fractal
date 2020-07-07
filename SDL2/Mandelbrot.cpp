@@ -15,9 +15,9 @@ unsigned get_mandlebrot_iter(double cr, double ci, unsigned max_iter)
 
 	unsigned n = 0; //iteration count
 
-	while (n < max_iter && zx * zx + zy * zy <= 4.0) {
-		double tx = cr + ((zx + zy) * (zx - zy));
-		double ty = 2 * zx * zy + ci;
+	while (n < max_iter && (zx * zx + zy * zy <= 4.0)) {
+		double tx = cr + (zx * zx - zy * zy);
+		double ty = 2.0 * zx * zy + ci;
 
 		zx = tx;
 		zy = ty;

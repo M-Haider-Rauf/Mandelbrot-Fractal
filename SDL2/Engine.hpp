@@ -10,12 +10,15 @@ class Engine {
 public:
 	~Engine();
 
+	Engine(const Engine&) = delete;
+	Engine& operator=(const Engine&) = delete;
+
 	void main_loop();
 
 	//update a *portion* of screen pixels
 	//update the pixel columns [start, end) 
 	//This is required for multi-threading so 
-	//each thread can update a portion of screen
+	//each thread can update a different portion of screen
 	void update_screen_slice(size_t start, size_t end, int pitch, void* pixels);
 
 	//singleton pattern

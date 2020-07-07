@@ -42,21 +42,29 @@ Engine::Engine()
 
 
 	pixel_table = new SDL_Color[max_iter + 1]{};
-	const double o = std::log(max_iter);
 
-	for (size_t i = 0; i < max_iter; ++i) {
-		double factor = std::log(i + 1.0) / o;
-		unsigned char val = std::round(factor * 255.0);
+	//Here we map iter number to pixel color
+	//There are a lot of different coloring schemes, 
+	//I just copied one I liked from the internet, which is a
+	//sinusoidal coloring scheme
+	for (size_t i = 0; i < max_iter + 1; ++i) {
+		constexpr double p = 1.0 / 10.0; //period (in rads)
 
-		if (factor > 0.5) {
-			pixel_table[i] = { val, val, val, 255 };
-		}
-		else {
-			pixel_table[i] = { val, val , val, 255};
-		}
+		//Normalized rgb values
+		double nr = 0.5 * std::sin(p * i) + 0.5;
+		double ng = 0.5 * std::sin(p * i + (2.0 * M_PI / 3.0)) + 0.5;
+		double nb = 0.5 * std::sin(p * i + (4.0 * M_PI / 3.0)) + 0.5;
+
+		//scale to [0, 255] range
+		unsigned char r = std::round(nr * 255.0);
+		unsigned char g = std::round(ng * 255.0);
+		unsigned char b = std::round(nb * 255.0);
+
+
+		pixel_table[i] = {
+			r, g, b, 255
+		};
 	}
-
-	pixel_table[max_iter] = { 0, 0, 0, 255 };
 }
 
 Engine::~Engine()
@@ -154,6 +162,7 @@ void Engine::update_draw()
 			if (j == 3) end = WIN_WIDTH;
 
 			this->update_screen_slice(start, end, pitch, pixels);;
+
 		};
 
 		threads[i] = std::thread(slice_thread, i);
@@ -190,7 +199,7 @@ void Engine::update_screen_slice(size_t start, size_t end, int pitch, void* pixe
 {
 	auto SetPixel = [&](int x, int y, const SDL_Color& pixel)
 	{
-		Uint8* target = (Uint8*)(pixels) + (y * pitch) + x * 4;
+		Uint8* target = ((Uint8*)(pixels)) + y * pitch + x * 4;
 		target[0] = pixel.b;
 		target[1] = pixel.g;
 		target[2] = pixel.r;
