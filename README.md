@@ -9,7 +9,7 @@ concepts you'll ever see.
 
 # Screenshots
 
-![](https://ibb.co/0mFL5Q8)
-![](https://ibb.co/Fgv1GtS)
-![](https://ibb.co/0DK9PLk)
+![] (https://ibb.co/0mFL5Q8)
+![] (https://ibb.co/Fgv1GtS)
+![] (https://ibb.co/0DK9PLk)
 
