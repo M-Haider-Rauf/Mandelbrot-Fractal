@@ -69,7 +69,7 @@ Engine::Engine()
 
 Engine::~Engine()
 {
-	delete pixel_table;
+	delete[] pixel_table;
 	SDL_DestroyWindow(g_window);
 	SDL_DestroyRenderer(g_renderer);
 	SDL_DestroyTexture(texture);
@@ -91,7 +91,7 @@ void Engine::handle_events()
 	bool update = false;
 	double dt = (SDL_GetTicks() - prev_time) / 1000.0;
 	this->prev_time = SDL_GetTicks();
-	double speed = view_radius * dt;
+	double speed = view_radius * dt / 1.1;
 
 
 	while (SDL_PollEvent(&event_q)) {
