@@ -1,6 +1,8 @@
 #ifndef ENGINE_HPP
 #define ENGINE_HPP
 
+#include <stdint.h>
+
 struct SDL_Texture;
 struct SDL_Color;
 
@@ -48,9 +50,9 @@ private:
 
 	SDL_Texture* texture = nullptr; //The texture covering whole screen
 	unsigned prev_time = 0;  //for calculating time-step
-	size_t max_iter = 256;	//aka precision
+	unsigned max_iter = 256;	//aka precision
 
-	SDL_Color* pixel_table = nullptr; //lookup table for pixel coloring scheme
+	uint32_t* pixel_table = nullptr; //lookup table for pixel coloring scheme
 };
 
 #endif // !ENGINE_HPP

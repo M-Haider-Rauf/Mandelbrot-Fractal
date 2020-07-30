@@ -31,9 +31,16 @@ Engine::Engine()
 		abort();
 	}
 
+	g_rend_info = new SDL_RendererInfo;
+
+	SDL_GetRendererInfo(g_renderer, g_rend_info);
+
 	running = true;
-	texture = SDL_CreateTexture(g_renderer, SDL_PIXELFORMAT_ARGB8888,
-		SDL_TEXTUREACCESS_STREAMING, WIN_WIDTH, WIN_HEIGHT);
+	texture = SDL_CreateTexture(g_renderer, 
+		g_rend_info->texture_formats[0],
+		SDL_TEXTUREACCESS_STREAMING,
+		WIN_WIDTH, WIN_HEIGHT
+		);
 
 	if (!texture) {
 		std::cerr << "Error creating texture\n";
@@ -41,12 +48,15 @@ Engine::Engine()
 	}
 
 
-	pixel_table = new SDL_Color[max_iter + 1]{};
+	pixel_table = new uint32_t[max_iter + 1]{};
 
 	//Here we map iter number to pixel color
 	//There are a lot of different coloring schemes, 
 	//I just copied one I liked from the internet, which is a
 	//sinusoidal coloring scheme
+
+	SDL_PixelFormat* pix_format = SDL_AllocFormat(g_rend_info->texture_formats[0]);
+
 	for (size_t i = 0; i < max_iter + 1; ++i) {
 		constexpr double p = 1.0 / 10.0; //period (in rads)
 
@@ -60,16 +70,16 @@ Engine::Engine()
 		unsigned char g = std::round(ng * 255.0);
 		unsigned char b = std::round(nb * 255.0);
 
-
-		pixel_table[i] = {
-			r, g, b, 255
-		};
+		pixel_table[i] = SDL_MapRGB(pix_format, r, g, b);
 	}
+
+	SDL_FreeFormat(pix_format);
 }
 
 Engine::~Engine()
 {
 	delete[] pixel_table;
+	delete g_rend_info;
 	SDL_DestroyWindow(g_window);
 	SDL_DestroyRenderer(g_renderer);
 	SDL_DestroyTexture(texture);
@@ -188,31 +198,31 @@ void Engine::render() const
 void Engine::save_screenshot() const 
 {
 	char file_name[20];
-	SDL_Surface* ss = SDL_CreateRGBSurface(0, WIN_WIDTH, WIN_HEIGHT, 32,
-		0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-	SDL_RenderReadPixels(g_renderer, nullptr, SDL_PIXELFORMAT_ARGB8888, ss->pixels, ss->pitch);
+	SDL_Surface* ss = SDL_CreateRGBSurfaceWithFormat(
+		0, WIN_WIDTH, WIN_HEIGHT,
+		32, g_rend_info->texture_formats[0]
+		);
+
+	SDL_RenderReadPixels(g_renderer, nullptr, g_rend_info->texture_formats[0], ss->pixels, ss->pitch);
 	sprintf_s(file_name, "ss_%ld.bmp", time(nullptr));
 	SDL_SaveBMP(ss, file_name);
+
+	SDL_FreeSurface(ss);
+
 }
 
 void Engine::update_screen_slice(size_t start, size_t end, int pitch, void* pixels)
 {
-	auto SetPixel = [&](int x, int y, const SDL_Color& pixel)
-	{
-		Uint8* target = ((Uint8*)(pixels)) + y * pitch + x * 4;
-		target[0] = pixel.b;
-		target[1] = pixel.g;
-		target[2] = pixel.r;
-	};
-
 	for (size_t y = 0; y < WIN_HEIGHT; ++y) {
 		for (size_t x = start; x < end; ++x) {
+
+			uint32_t* target = (uint32_t*) (((Uint8*)(pixels)) + y * pitch + x * 4);
 
 			double cr = scale(x, 0, WIN_WIDTH - 1, -view_radius + x_off, view_radius + x_off);
 			double ci = scale(y, WIN_HEIGHT - 1, 0, -view_radius + y_off, view_radius + y_off);
 
 			unsigned iters = get_mandlebrot_iter(cr, ci, max_iter);
-			SetPixel(x, y, pixel_table[iters]);
+			*target = pixel_table[iters];
 		}
 	}
 }
